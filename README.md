@@ -4,6 +4,7 @@ DocuVerse is a document analysis tool that allows users to upload PDF/DOCX files
 App Link: https://docuverse-kvrxhzujikwqqqkokjqqjm.streamlit.app/
 
 If App in sleep mode please wake it up using the button you see on the web-page.
+
 ---
 
 ## ✨ Features  
