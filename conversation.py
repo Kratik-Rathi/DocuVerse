@@ -22,66 +22,57 @@ def get_conversation_chain(vectorstore):
 
 
 def handle_user_input(user_question):
-    # Determine if the user expects a list/points
+    """Handles user input and displays conversation history correctly."""
+
     if any(keyword in user_question.lower() for keyword in ["points", "list", "bullets"]):
-        prompt = f"Provide the answer in bullet points: {user_question}"
+        prompt = f"Give the answer in bullet points without missing any information: {user_question}"
     else:
-        prompt = user_question  # Keep the user's original question as-is
+        prompt = f"Provide a detailed answer in paragraph format without omitting details: {user_question}"
 
-    # Query the conversation chain
+    if "conversation" not in st.session_state:
+        st.error("Conversation chain is not initialized. Please upload a file first.")
+        return
+
     response = st.session_state.conversation({"question": prompt})
-    st.session_state.chat_history = response["chat_history"]
-
-    # Layout of input/response containers
-    response_container = st.container()
-
-    # Display chat history
-    with response_container:
-        for i, messages in enumerate(st.session_state.chat_history):
-            if i % 2 == 0:
-                # Display the user's question only (not the reformatted prompt)
-                message(user_question, is_user=True, key=str(i))
-            else:
-                # Display the assistant's response
-                message(messages.content, key=str(i))
+    assistant_reply = response.get("answer", "Sorry, I couldn't generate a response.")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    st.session_state.chat_history.append({"user": user_question, "assistant": assistant_reply})
+    for i, chat in enumerate(st.session_state.chat_history):
+        message(chat["user"], is_user=True, key=f"user_{i}")
+        message(chat["assistant"], key=f"assistant_{i}")
 
 
 def generate_summary(user_preference="paragraph", auto_generate=False):
     """Generate a detailed summary from the document."""
-    # Ensure the conversation chain is available
     if not st.session_state.conversation:
         return "No data available to summarize."
-
-    # If auto_generate is True, set user_preference to "paragraph"
     if auto_generate:
         user_preference = "paragraph"
 
     # Dynamically adjust the summary prompt
     if user_preference == "paragraph":
-        prompt = "Provide a very detailed and comprehensive summary of the document in a paragraph format, including all key aspects and insights."
+        prompt = "Provide a very detailed and comprehensive summary of the document in a single paragraph, including all key aspects and insights."
     elif user_preference == "points":
         prompt = "Provide a very detailed summary of the document in bullet points, including all major insights and important details."
     else:
-        prompt = "Provide a very detailed summary of the document in a paragraph format, including all key aspects and insights."
+        prompt = "Provide a very detailed summary of the document in a single paragraph, including all key aspects and insights."
 
-    # Temporarily disable memory updates during summary generation
     original_memory = st.session_state.conversation.memory
-    st.session_state.conversation.memory = None  # Disable memory
-
+    st.session_state.conversation.memory = None
     try:
-        # Query the conversational chain for the summary with an empty chat history
         response = st.session_state.conversation({"question": prompt, "chat_history": []})
         summary = response["answer"]
     finally:
-        # Restore the memory after summary generation
         st.session_state.conversation.memory = original_memory
 
-    # Format the summary based on user preference
     if user_preference == "paragraph":
         summary = enforce_paragraph_format(summary)
     return summary
 
 
 def update_summary_format():
-    user_preference = "points" if st.session_state.summary_format == "Points" else "paragraph"
+    st.session_state.summary = None
+    print(st.session_state.summary_format)
+    user_preference = "points" if st.session_state.summary_format == "Points" else "Paragraph"
     st.session_state.summary = generate_summary(user_preference=user_preference)
