@@ -26,6 +26,8 @@ def main():
         initialize_model()
     if "is_processing" not in st.session_state:
         st.session_state.is_processing = False
+    if "summary_format_changed" not in st.session_state:
+        st.session_state.summary_format_changed = False
 
     # Conditional layout for file uploader
     if not st.session_state.processComplete:
@@ -34,7 +36,7 @@ def main():
             "Upload your PDF or DOCX file", type=["pdf", "docx"], accept_multiple_files=True
         )
         process = st.button("Process")
-        warning_placeholder = st.empty()  # Initialize the warning placeholder
+        warning_placeholder = st.empty()
     else:
         with st.sidebar:
             st.write("## Upload more files")
@@ -42,13 +44,13 @@ def main():
                 "Upload your PDF or DOCX file", type=["pdf", "docx"], accept_multiple_files=True
             )
             process = st.button("Process")
-            warning_placeholder = st.empty()  # Initialize the warning placeholder
+            warning_placeholder = st.empty()
 
     # Process the uploaded files if the process button is clicked
     if process:
         if uploaded_files:
             st.session_state.conversation = None
-            st.session_state.chat_history = None
+            st.session_state.chat_history = []
             st.session_state.processComplete = False
             st.session_state.summary = None
 
@@ -78,20 +80,26 @@ def main():
         st.radio(
             "Select summary format:",
             options=["Paragraph", "Points"],
-            index=0 if st.session_state.summary_format == "Paragraph" else 1,
             on_change=update_summary_format,
             key="summary_format",
         )
 
-        if not st.session_state.summary:
-            user_preference = "points" if st.session_state.summary_format == "Points" else "paragraph"
+        if st.session_state.summary_format_changed:
+            user_preference = "points" if st.session_state.summary_format == "Points" else "Paragraph"
             st.session_state.summary = generate_summary(user_preference=user_preference)
+            st.session_state.summary_format_changed = True
 
         st.write(st.session_state.summary or "No summary available.")
 
         user_question = st.chat_input("Ask a question about your files.")
         if user_question:
-            handle_user_input(user_question)
+            response = handle_user_input(user_question)  # Get response
+            if response and "answer" in response:
+                st.session_state.chat_history.append({"user": user_question, "assistant": response["answer"]})
+                with st.chat_message("user"):
+                    st.write(user_question)
+                with st.chat_message("assistant"):
+                    st.write(response["answer"])
     else:
         if st.session_state.is_processing:
             st.info("Processing the uploaded document. Please wait...")
