@@ -5,7 +5,7 @@ import streamlit as st
 def initialize_model():
     """Initialize the Groq-based model."""
     st.session_state.model = ChatGroq(
-        model="llama3-8b-8192",  # Update with the desired Groq-supported model
+        model="gemma2-9b-it",  # Update with the desired Groq-supported model
         temperature=0.3
     )
 
