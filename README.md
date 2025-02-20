@@ -1,7 +1,7 @@
 # DocuVerse  
 DocuVerse is a document analysis tool that allows users to upload PDF/DOCX files, generate summaries in different formats, and ask context-based questions about the document. Built with modern NLP and AI technologies, it simplifies document comprehension and interaction.  
 
-App Link: https://docuverse-kvrxhzujikwqqqkokjqqjm.streamlit.app/
+App Link: https://docuverse-kratikrathi.streamlit.app/
 
 If App in sleep mode please wake it up using the button you see on the web-page.
 
@@ -20,7 +20,7 @@ If App in sleep mode please wake it up using the button you see on the web-page.
 ## 🛠️ Tech Stack  
 - **Backend**: Python, Flask, LangChain,  HuggingFace, GroqCloud    
 - **Frontend**: Streamlit 
-- **NLP/ML**: Llama3-8b-8192, Transformers, PyPDF2, python-docx, 
+- **NLP/ML**: Gemma2-9b-it, Transformers, PyPDF2, python-docx, 
 - **Utilities**: dotenv, FAISS (vector storage)  
 
 ---
@@ -79,7 +79,7 @@ If App in sleep mode please wake it up using the button you see on the web-page.
    - Chunking text for efficient processing.  
 
 2. **Summarization**:  
-   - Leverages Llama3-8b-8192 model on GroqCloud to generate summaries in the desired format.  
+   - Leverages Gemma2-9b-it model on GroqCloud to generate summaries in the desired format.  
 
 3. **Q&A System**:  
    - Uses LangChain and FAISS vector storage for semantic search.  
