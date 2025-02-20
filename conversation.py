@@ -54,12 +54,13 @@ def generate_summary(user_preference="paragraph", auto_generate=False):
     if user_preference == "paragraph":
         prompt = "Provide a very detailed and comprehensive summary of the document in a single paragraph, including all key aspects and insights."
     elif user_preference == "points":
-        prompt = "Provide a very detailed summary of the document in bullet points, including all major insights and important details."
+        prompt = "Provide a very detailed and comprehensive summary of the document in bullet points, including all major insights and important details."
     else:
-        prompt = "Provide a very detailed summary of the document in a single paragraph, including all key aspects and insights."
+        prompt = "Provide a very detailed and comprehensive summary of the document in a single paragraph, including all key aspects and insights."
 
     original_memory = st.session_state.conversation.memory
     st.session_state.conversation.memory = None
+
     try:
         response = st.session_state.conversation({"question": prompt, "chat_history": []})
         summary = response["answer"]
