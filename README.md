@@ -1,7 +1,7 @@
 # DocuVerse  
 DocuVerse is a document analysis tool that allows users to upload PDF/DOCX files, generate summaries in different formats, and ask context-based questions about the document. Built with modern NLP and AI technologies, it simplifies document comprehension and interaction.  
 
-App Link: https://docuverse-kratikrathi.streamlit.app/
+App Link: https://docuverse-kratik.streamlit.app/
 
 If App in sleep mode please wake it up using the button you see on the web-page.
 
