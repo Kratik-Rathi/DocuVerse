@@ -51,9 +51,9 @@ If App in sleep mode please wake it up using the button you see on the web-page.
    ```  
 
 4. **Configure environment variables**:  
-   Create a `.env` file in the root directory and add:  
-   ```env  
-   GROQ_API_KEY=="your-api-key-here"  
+   Create a `.streamlit` folder and `secrets.toml` file in the directory and add:  
+   ```  
+   GROQ_API_KEY = "your-api-key-here"  
    ```  
 
 ### Usage  
@@ -63,7 +63,7 @@ If App in sleep mode please wake it up using the button you see on the web-page.
    ```  
 
 2. **Upload a document**:  
-   - Click "Upload" and select a PDF/DOCX file.  
+   - Click "Upload" and select a PDF/DOCX/TXT/XLSX file.  
 
 3. **Generate a summary**:  
    - Toggle between paragraph/bullet-point formats.  
@@ -75,7 +75,7 @@ If App in sleep mode please wake it up using the button you see on the web-page.
 
 ## 🔍 How It Works  
 1. **Document Processing**:  
-   - Text extraction from PDF/DOCX using `PyPDF2` and `python-docx`.  
+   - Text extraction from PDF/DOCX/TXT/XLSX using `PyPDF2`, `python-docx` and  `openpyxl`.  
    - Chunking text for efficient processing.  
 
 2. **Summarization**:  
