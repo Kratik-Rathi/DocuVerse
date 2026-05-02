@@ -1,7 +1,7 @@
 import re
 import tempfile
 import pandas as pd
-from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_core.documents import Document
 
 
@@ -43,7 +43,7 @@ def get_docx_text(file):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             tmp.write(file.read())
             tmp_path = tmp.name
-        loader = UnstructuredWordDocumentLoader(tmp_path)
+        loader = Docx2txtLoader(tmp_path)
         docs = loader.load()
         return "\n".join([doc.page_content for doc in docs])
     except Exception as e:
