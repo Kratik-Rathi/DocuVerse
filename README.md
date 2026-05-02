@@ -1,96 +1,221 @@
-# DocuVerse  
-DocuVerse is a document analysis tool that allows users to upload PDF/DOCX files, generate summaries in different formats, and ask context-based questions about the document. Built with modern NLP and AI technologies, it simplifies document comprehension and interaction.  
+# DocuVerse RAG Application
 
-App Link: https://docuverse-kratikrathi.streamlit.app/
+A powerful document question-answering application built with Streamlit, LangChain, and Milvus vector database.
 
-If App in sleep mode please wake it up using the button you see on the web-page.
+## 🚀 Quick Start
 
----
+### Prerequisites
+- Docker and Docker Compose installed
+- At least 4GB RAM available for Docker
 
-## ✨ Features  
-- **Document Upload**: Supports PDF and DOCX files.  
-- **AI-Powered Summarization**:  
-  - Toggle between **paragraph summaries** and **bullet-point summaries**.  
-  - Extracts key information efficiently.  
-- **Contextual Q&A**: Ask questions related to the uploaded document and get precise answers.  
-- **User-Friendly Interface**: Clean and intuitive UI for seamless interaction.  
+### Option 1: Using Startup Scripts (Recommended)
 
----
+**For Windows:**
+```bash
+start.bat
+```
 
-## 🛠️ Tech Stack  
-- **Backend**: Python, Flask, LangChain,  HuggingFace, GroqCloud    
-- **Frontend**: Streamlit 
-- **NLP/ML**: Gemma2-9b-it, Transformers, PyPDF2, python-docx, 
-- **Utilities**: dotenv, FAISS (vector storage)  
+**For Linux/Mac:**
+```bash
+chmod +x start.sh
+./start.sh
+```
 
----
+### Option 2: Manual Docker Commands
 
-## 🚀 Quick Start  
+1. **Start the services:**
+```bash
+docker-compose up --build -d
+```
 
-### Prerequisites  
-- Python 3.8+  
-- Groq Cloud API key ([get it here](https://console.groq.com/docs/quickstart)  
+2. **Wait for Milvus to be ready (about 30-60 seconds):**
+```bash
+# Check if Milvus is healthy
+curl http://localhost:9091/healthz
+```
 
-### Installation  
-1. **Clone the repository**:  
-   ```bash  
-   git clone https://github.com/Kratik-Rathi/DocuVerse.git  
-   cd DocuVerse  
-   ```  
+3. **Access the application:**
+- 🌐 **Streamlit App**: http://localhost:8501
+- 🔍 **Milvus API**: http://localhost:9091
 
-2. **Set up a virtual environment**:  
-   ```bash  
-   python -m venv venv  
-   source venv/bin/activate  # Linux/Mac  
-   venv\Scripts\activate    # Windows  
-   ```  
+## 📁 Project Structure
 
-3. **Install dependencies**:  
-   ```bash  
-   pip install -r requirements.txt  
-   ```  
+```
+DocuVerse Rebuild/
+├── app.py                 # Main Streamlit application
+├── text_processor.py      # Document processing and vector storage
+├── document_processor.py  # File parsing and text extraction
+├── model.py              # LLM model initialization
+├── conversation.py       # Chat conversation handling
+├── utils.py              # Utility functions
+├── docker-compose.yml    # Docker services configuration
+├── Dockerfile           # Streamlit app container
+├── requirements.txt     # Python dependencies
+├── start.sh            # Linux/Mac startup script
+├── start.bat           # Windows startup script
+└── README.md           # This file
+```
 
-4. **Configure environment variables**:  
-   Create a `.streamlit` folder and `secrets.toml` file in the directory and add:  
-   ```  
-   GROQ_API_KEY = "your-api-key-here"  
-   ```  
+## Prerequisites
+Python 3.8+
+Groq Cloud API key: https://console.groq.com/docs/quickstart
 
-### Usage  
-1. **Run the streamlit app**:  
-   ```bash  
-   streamlit run app,py  
-   ```  
+## 🔧 Configuration
 
-2. **Upload a document**:  
-   - Click "Upload" and select a PDF/DOCX/TXT/XLSX file.  
+### Environment Variables
 
-3. **Generate a summary**:  
-   - Toggle between paragraph/bullet-point formats.  
+The application uses these environment variables (set in docker-compose.yml):
 
-4. **Ask questions**:  
-   - Type questions in the chat-style interface for instant answers.  
+- `MILVUS_HOST`: Milvus database host (default: localhost)
+- `MILVUS_PORT`: Milvus database port (default: 19530)
 
----
+### Supported File Types
 
-## 🔍 How It Works  
-1. **Document Processing**:  
-   - Text extraction from PDF/DOCX/TXT/XLSX using `PyPDF2`, `python-docx` and  `openpyxl`.  
-   - Chunking text for efficient processing.  
+- PDF files (.pdf)
+- Word documents (.docx)
+- Text files (.txt)
+- Excel files (.xlsx)
 
-2. **Summarization**:  
-   - Leverages Gemma2-9b-it model on GroqCloud to generate summaries in the desired format.  
+### Streamlit Secrets & Groq API Setup
 
-3. **Q&A System**:  
-   - Uses LangChain and FAISS vector storage for semantic search.  
+For local development or deployment on Streamlit Cloud, you need to configure your **Groq API key** securely.
 
----
+#### Local Setup
+1. Create a hidden folder `.streamlit` in the project root:
+   ```bash
+   mkdir .streamlit
 
-## 📄 License  
-Distributed under the MIT License. See `LICENSE` for details.  
+2. Inside .streamlit, create a file called secrets.toml:
+   ```bash 
+   GROQ_API_KEY = "your-api-key-here"
 
+## 🛠️ Troubleshooting
 
----
+### Common Issues
 
-**Note**:  
-Replace `your-api-key-here` in the `.env` file with your actual Groq API key.  
+1. **Milvus Connection Failed**
+   ```
+   ❌ Failed to connect to Milvus: Connection refused
+   ```
+   **Solution**: Wait for Milvus to fully start (30-60 seconds) or check Docker logs:
+   ```bash
+   docker-compose logs milvus-standalone
+   ```
+
+2. **Port Already in Use**
+   ```
+   Error: Port 19530 is already in use
+   ```
+   **Solution**: Stop existing containers and remove volumes:
+   ```bash
+   docker-compose down -v
+   docker-compose up --build -d
+   ```
+
+3. **Memory Issues**
+   ```
+   Out of memory error
+   ```
+   **Solution**: Increase Docker memory limit to at least 4GB
+
+4. **Collection Creation Failed**
+   ```
+   Failed to create vector store
+   ```
+   **Solution**: Check if Milvus is healthy and restart if needed:
+   ```bash
+   docker-compose restart milvus-standalone
+   ```
+
+### Debug Commands
+
+**View all logs:**
+```bash
+docker-compose logs -f
+```
+
+**View specific service logs:**
+```bash
+docker-compose logs -f milvus-standalone
+docker-compose logs -f streamlit-app
+```
+
+**Check service status:**
+```bash
+docker-compose ps
+```
+
+**Restart services:**
+```bash
+docker-compose restart
+```
+
+**Complete reset (removes all data):**
+```bash
+docker-compose down -v
+docker-compose up --build -d
+```
+
+## 🔍 Health Checks
+
+### Milvus Health
+```bash
+curl http://localhost:9091/healthz
+```
+
+### Streamlit Health
+```bash
+curl http://localhost:8501/_stcore/health
+```
+
+## 📊 Performance Tips
+
+1. **Large Documents**: For documents >10MB, consider splitting them into smaller files
+2. **Memory Usage**: Monitor Docker memory usage, especially during document processing
+3. **Collection Management**: The app automatically cleans up old collections to prevent conflicts
+
+## 🚀 Development
+
+### Local Development (without Docker)
+
+1. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Start Milvus with Docker:
+```bash
+docker-compose up milvus-standalone -d
+```
+
+3. Run Streamlit app:
+```bash
+streamlit run app.py
+```
+
+### Adding New Features
+
+1. **New File Types**: Add support in `document_processor.py`
+2. **New Embedding Models**: Modify `text_processor.py`
+3. **UI Changes**: Update `app.py` and related Streamlit components
+
+## 📝 License
+
+This project is open source and available under the MIT License.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📞 Support
+
+If you encounter issues:
+
+1. Check the troubleshooting section above
+2. Review Docker logs for error messages
+3. Ensure all prerequisites are met
+4. Try a complete reset with `docker-compose down -v && docker-compose up --build -d` 

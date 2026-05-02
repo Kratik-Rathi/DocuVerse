@@ -9,7 +9,7 @@ def initialize_model():
             # Access the API key from Streamlit secrets
             groq_api_key = st.secrets["GROQ_API_KEY"]
             st.session_state.model = ChatGroq(
-                model="gemma2-9b-it",  # Replace with the correct model name
+                model="llama-3.1-8b-instant",  # Replace with the correct model name
                 api_key=groq_api_key,
                 temperature=0.3
             )

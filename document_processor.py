@@ -1,60 +1,67 @@
-import docx
-from PyPDF2 import PdfReader
-import os
+import re
+import tempfile
 import pandas as pd
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
+from langchain_core.documents import Document
 
 
 def get_files_text(uploaded_files):
-    text = ""
-    for uploaded_file in uploaded_files:
-        split_tup = os.path.splitext(uploaded_file.name)
-        file_extension = split_tup[1].lower()  # To handle .TXT or .Docx etc.
+    all_docs = []
+    for file in uploaded_files:
+        file.seek(0)
+        if file.type == "application/pdf":
+            text = get_pdf_text(file)
+        elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            text = get_docx_text(file)
+        elif file.type == "text/plain":
+            content = file.read()
+            text = content.decode("utf-8", errors="ignore")
+        elif file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+            text = get_xlsx_text(file)
+        else:
+            text = "[Unsupported file type]"
 
-        if file_extension == ".pdf":
-            text += get_pdf_text(uploaded_file)
-        elif file_extension == ".docx":
-            text += get_docx_text(uploaded_file)
-        elif file_extension == ".txt":
-            text += get_txt_text(uploaded_file)
-        elif file_extension == ".xlsx":
-            text += get_xlsx_text(uploaded_file)
-
-    return text
+        all_docs.append(Document(page_content=text))
+        file.seek(0)
+    return all_docs
 
 
-def get_pdf_text(pdf):
-    pdf_reader = PdfReader(pdf)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text() or ""  # In case extract_text() returns None
-    return text
+def get_pdf_text(file):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(file.read())
+            tmp_path = tmp.name
+        loader = PyPDFLoader(tmp_path)
+        pages = loader.load()
+        return "\n".join([p.page_content for p in pages])
+    except Exception as e:
+        return f"[Error reading PDF: {e}]"
 
 
 def get_docx_text(file):
-    doc = docx.Document(file)
-    alltext = []
-    for docpara in doc.paragraphs:
-        alltext.append(docpara.text)
-    text = ' '.join(alltext)
-    return text
-
-
-def get_txt_text(file):
-    content = file.read()
-    if isinstance(content, bytes):
-        return content.decode("utf-8", errors="ignore")
-    return content
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+            tmp.write(file.read())
+            tmp_path = tmp.name
+        loader = UnstructuredWordDocumentLoader(tmp_path)
+        docs = loader.load()
+        return "\n".join([doc.page_content for doc in docs])
+    except Exception as e:
+        return f"[Error reading DOCX: {e}]"
 
 
 def get_xlsx_text(file):
-    text = ""
     try:
-        excel_file = pd.read_excel(file, sheet_name=None)  # Read all sheets
+        excel_file = pd.read_excel(file, sheet_name=None)
+        text = ""
         for sheet_name, df in excel_file.items():
             text += f"\nSheet: {sheet_name}\n"
             text += df.to_string(index=False, header=True)
-            text += "\n\n"
+            text += "\n"
+        return text
     except Exception as e:
-        text += f"\n[Error reading Excel file: {e}]\n"
-    return text
+        return f"[Error reading Excel file: {e}]"
 
+
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text).strip()

@@ -1,107 +1,186 @@
 import streamlit as st
+import hashlib
+import os
+
 from document_processor import get_files_text
 from text_processor import get_vectorstore, get_text_chunks
 from model import initialize_model
-from conversation import handle_user_input, generate_summary, update_summary_format, get_conversation_chain
+from conversation import (
+    handle_user_input,
+    generate_summary,
+    update_summary_format,
+    get_conversation_chain
+)
+
+# 🔹 Toggle Milvus (OFF for Streamlit)
+USE_MILVUS = os.getenv("USE_MILVUS", "false").lower() == "true"
 
 
+# -------------------------------
+# 🔹 File Hash Helpers
+# -------------------------------
+def get_file_hashes(files):
+    hashes = []
+    for f in files:
+        content = f.read()
+        hashes.append(hashlib.md5(content).hexdigest())
+        f.seek(0)
+    return hashes
+
+
+def files_changed(new_files, prev_hashes):
+    if not new_files or not prev_hashes:
+        return True
+    return get_file_hashes(new_files) != prev_hashes
+
+
+# -------------------------------
+# 🔹 Main App
+# -------------------------------
 def main():
     st.set_page_config(page_title="Ask your Document", layout="wide")
     st.title("Ask Your Document")
 
-    # Initialize session state variables
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = None
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
-    if "processComplete" not in st.session_state:
-        st.session_state.processComplete = False
-    if "summary_format" not in st.session_state:
-        st.session_state.summary_format = "Paragraph"
-    if "summary" not in st.session_state:
-        st.session_state.summary = None
+    # -------------------------------
+    # 🔹 Session State Init
+    # -------------------------------
+    defaults = {
+        "conversation": None,
+        "chat_history": [],
+        "processComplete": False,
+        "summary_format": "Paragraph",
+        "summary_format_changed": False,
+        "summary": None,
+        "is_processing": False,
+        "uploaded_files": None,
+        "prev_file_hashes": None,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
     if "model" not in st.session_state:
         initialize_model()
-    if "is_processing" not in st.session_state:
-        st.session_state.is_processing = False
-    if "summary_format_changed" not in st.session_state:
-        st.session_state.summary_format_changed = False
 
-    # Conditional layout for file uploader
+    # -------------------------------
+    # 🔹 Upload UI
+    # -------------------------------
     if not st.session_state.processComplete:
         st.write("## Upload your file")
         uploaded_files = st.file_uploader(
-            "Upload your PDF or DOCX file", type=["pdf", "docx", "txt", "xlsx"], accept_multiple_files=True
+            "Upload PDF, DOCX, TXT, XLSX",
+            type=["pdf", "docx", "txt", "xlsx"],
+            accept_multiple_files=True,
         )
         process = st.button("Process")
-        warning_placeholder = st.empty()
     else:
         with st.sidebar:
             st.write("## Upload more files")
             uploaded_files = st.file_uploader(
-                "Upload your PDF or DOCX file", type=["pdf", "docx", "txt", "xlsx"], accept_multiple_files=True
+                "Upload PDF, DOCX, TXT, XLSX",
+                type=["pdf", "docx", "txt", "xlsx"],
+                accept_multiple_files=True,
             )
             process = st.button("Process")
-            warning_placeholder = st.empty()
 
-    # Process the uploaded files if the process button is clicked
+    # -------------------------------
+    # 🔹 Process Files
+    # -------------------------------
     if process:
         if uploaded_files:
-            st.session_state.conversation = None
-            st.session_state.chat_history = []
-            st.session_state.processComplete = False
-            st.session_state.summary = None
+            current_hashes = get_file_hashes(uploaded_files)
 
-            st.session_state.is_processing = True
+            if files_changed(uploaded_files, st.session_state.prev_file_hashes):
+                st.session_state.prev_file_hashes = current_hashes
+                st.session_state.chat_history = []
+                st.session_state.conversation = None
+                st.session_state.summary = None
+                st.session_state.processComplete = False
+                st.session_state.is_processing = True
 
-            # Get text from uploaded files
-            files_text = get_files_text(uploaded_files)
-            text_chunks = get_text_chunks(files_text)
+                with st.spinner("Processing documents..."):
+                    try:
+                        # 🔥 No Milvus dependency here anymore
+                        files_text = get_files_text(uploaded_files)
+                        text_chunks = get_text_chunks(files_text)
 
-            vectorstore = get_vectorstore(text_chunks)
-            st.session_state.conversation = get_conversation_chain(vectorstore)
+                        # 👉 This already handles Milvus → FAISS fallback
+                        vectorstore = get_vectorstore(text_chunks)
 
-            # Generate summary based on user preference
-            user_preference = "points" if st.session_state.summary_format == "Points" else "paragraph"
-            st.session_state.summary = generate_summary(user_preference=user_preference)
+                        st.session_state.conversation = get_conversation_chain(vectorstore)
 
-            # Mark process as complete
-            st.session_state.processComplete = True
-            st.session_state.is_processing = False
+                        user_pref = (
+                            "points"
+                            if st.session_state.summary_format == "Points"
+                            else "paragraph"
+                        )
+
+                        st.session_state.summary = generate_summary(user_preference=user_pref)
+                        st.session_state.processComplete = True
+
+                        st.success("✅ Document processed successfully!")
+
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+                        st.session_state.processComplete = False
+
+                    finally:
+                        st.session_state.is_processing = False
+            else:
+                st.info("Same file uploaded. No reprocessing needed.")
         else:
-            # Use the warning_placeholder to show the warning message below the process button
-            warning_placeholder.warning("Please upload at least one file.")
+            st.warning("Please upload at least one file.")
 
-    # If the process is complete, show the summary and chat interface
+    # -------------------------------
+    # 🔹 Display Summary + Chat
+    # -------------------------------
     if st.session_state.processComplete:
         st.subheader("Summary")
+
         st.radio(
             "Select summary format:",
-            options=["Paragraph", "Points"],
-            on_change=update_summary_format,
+            ["Paragraph", "Points"],
             key="summary_format",
+            on_change=update_summary_format
         )
-
-        if st.session_state.summary_format_changed:
-            user_preference = "points" if st.session_state.summary_format == "Points" else "Paragraph"
-            st.session_state.summary = generate_summary(user_preference=user_preference)
-            st.session_state.summary_format_changed = True
 
         st.write(st.session_state.summary or "No summary available.")
 
-        user_question = st.chat_input("Ask a question about your files.")
+        # Chat History
+        for msg in st.session_state.chat_history:
+            with st.chat_message("user"):
+                st.write(msg["user"])
+            with st.chat_message("assistant"):
+                st.write(msg["assistant"])
+
+        # User Input
+        user_question = st.chat_input("Ask a question about your document")
+
         if user_question:
-            response = handle_user_input(user_question)  # Get response
-            if response and "answer" in response:
-                st.session_state.chat_history.append({"user": user_question, "assistant": response["answer"]})
-                with st.chat_message("user"):
-                    st.write(user_question)
-                with st.chat_message("assistant"):
-                    st.write(response["answer"])
-    else:
-        if st.session_state.is_processing:
-            st.info("Processing the uploaded document. Please wait...")
+            with st.chat_message("user"):
+                st.write(user_question)
+
+            response = handle_user_input(user_question)
+            answer = response.get("answer", "No answer found.")
+
+            st.session_state.chat_history.append({
+                "user": user_question,
+                "assistant": answer
+            })
+
+            with st.chat_message("assistant"):
+                st.write(answer)
+
+    # -------------------------------
+    # 🔹 Processing Indicator
+    # -------------------------------
+    if st.session_state.is_processing:
+        st.info("Processing... Please wait.")
 
 
-if __name__ == '__main__':
+# -------------------------------
+# 🔹 Run App
+# -------------------------------
+if __name__ == "__main__":
     main()
